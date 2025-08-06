@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'net.minecraftforge.gradle' version '6.0.24'
-    id 'org.jetbrains.kotlin.jvm' version '1.8.21'
+    id 'net.minecraftforge.gradle' version '6.0.33' // Updated Forge Gradle version
+    id 'org.jetbrains.kotlin.jvm' version '1.9.10' // Updated Kotlin version
 }
 
 group = mod_group_id
@@ -16,7 +16,7 @@ java {
 }
 
 minecraft {
-    mappings channel: mapping_channel, version: mapping_version
+    mappings channel: 'official', version: '1.20.1' // Updated to 1.20.1 mappings
     copyIdeResources = true
     runs {
         configureEach {
@@ -43,14 +43,14 @@ repositories {
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    minecraft "net.minecraftforge:forge:1.20.1-${forge_version}" // Updated Minecraft dependency to 1.20.1
     implementation('net.sf.jopt-simple:jopt-simple:5.0.4') { version { strictly '5.0.4' } }
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.21"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.10" // Updated Kotlin stdlib for compatibility
 }
 
 tasks.named('processResources', ProcessResources).configure {
     def replaceProperties = [
-            minecraft_version      : minecraft_version,
+            minecraft_version      : '1.20.1', // Updated to 1.20.1
             minecraft_version_range: minecraft_version_range,
             forge_version          : forge_version,
             forge_version_range    : forge_version_range,
