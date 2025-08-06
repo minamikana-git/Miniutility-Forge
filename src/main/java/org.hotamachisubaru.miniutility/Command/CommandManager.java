@@ -1,7 +1,5 @@
 package org.hotamachisubaru.miniutility.Command;
 
-import com.mojang.brigadier.context.CommandContext;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,19 +7,20 @@ import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.hotamachisubaru.miniutility.GUI.GUI;
-import org.hotamachisubaru.miniutility.MiniutilityLoader;
+import org.hotamachisubaru.miniutility.Miniutility;
+
+import java.util.function.Supplier;
 
 @Mod.EventBusSubscriber
 public class CommandManager {
-    private final MiniutilityLoader plugin;
+    private static Miniutility mod = new Miniutility();
 
-    public CommandManager(MiniutilityLoader plugin) {
-        this.plugin = plugin;
+    public CommandManager(Miniutility mod) {
+        this.mod = mod;
     }
 
     @SubscribeEvent
     public static void onServerStarting(ServerStartingEvent event) {
-        MiniutilityLoader plugin = MiniutilityLoader.getInstance();
         event.getServer().getCommands().getDispatcher().register(
                 Commands.literal("menu").executes(context -> {
                     Object sender = context.getSource().getEntity();
@@ -36,12 +35,11 @@ public class CommandManager {
 
         event.getServer().getCommands().getDispatcher().register(
                 Commands.literal("load").executes(context -> {
-                    Object miniutility = plugin.getMiniutility();
-                    if (miniutility == null) {
+                    if (mod == null) {
                         context.getSource().sendFailure(Component.literal("Miniutility本体がロードされていません。"));
                     } else {
-                        plugin.getMiniutility().getNicknameDatabase().reload();
-                        context.getSource().sendSuccess(Component.literal("ニックネームデータを再読み込みしました。"), true);
+                        mod.getNicknameDatabase().reload();
+                        context.getSource().sendSuccess(() -> Component.literal("ニックネームデータを再読み込みしました。"), true);
                     }
                     return 1;
                 })
@@ -54,15 +52,13 @@ public class CommandManager {
                         context.getSource().sendFailure(Component.literal("プレイヤーのみ実行可能です。"));
                         return 1;
                     }
-                    Object miniutility = plugin.getMiniutility();
-                    if (miniutility == null) {
+                    if (mod == null) {
                         context.getSource().sendFailure(Component.literal("Miniutility本体がロードされていません。"));
                         return 1;
                     }
-                    Object manager = plugin.getMiniutility().getNicknameManager();
-                    boolean enabled = ((org.hotamachisubaru.miniutility.NicknameManager) manager).togglePrefix(player.getUUID());
+                    boolean enabled = mod.getNicknameManager().togglePrefix(player.getUUID());
                     context.getSource().sendSuccess(
-                            Component.literal("Prefixの表示が " + (enabled ? "有効" : "無効")), true
+                            (Supplier<Component>) Component.literal(new StringBuilder().append("Prefixの表示が ").append(enabled ? "有効" : "無効").toString()), true
                     );
                     return 1;
                 })
