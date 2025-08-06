@@ -1,4 +1,3 @@
-// Config.java
 package org.hotamachisubaru.miniutility;
 
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -13,7 +12,7 @@ public class Config {
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        ENABLE_DOUBLE_JUMP = builder.comment("Enable double jump")
+        ENABLE_DOUBLE_JUMP = builder.comment("ダブルジャンプを有効にする")
                 .define("enableDoubleJump", true);
         CLIENT_SPEC = builder.build();
     }
@@ -25,5 +24,9 @@ public class Config {
         if (event.getConfig().getSpec() == CLIENT_SPEC) {
             enableDoubleJump = ENABLE_DOUBLE_JUMP.get();
         }
+    }
+
+    public void loadDefaultConfig() {
+        enableDoubleJump = true;
     }
 }
