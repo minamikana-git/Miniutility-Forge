@@ -1,10 +1,11 @@
 package org.hotamachisubaru.miniutility.Command;
 
+import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.hotamachisubaru.miniutility.GUI.GUI;
@@ -19,13 +20,13 @@ public class CommandManager {
     }
 
     @SubscribeEvent
-    public static void onRegisterCommands(RegisterCommandsEvent event) {
+    public static void onServerStarting(ServerStartingEvent event) {
         MiniutilityLoader plugin = MiniutilityLoader.getInstance();
-        event.getDispatcher().register(
+        event.getServer().getCommands().getDispatcher().register(
                 Commands.literal("menu").executes(context -> {
                     Object sender = context.getSource().getEntity();
-                    if (sender instanceof ServerPlayer) {
-                        GUI.openMenu((ServerPlayer) sender);
+                    if (sender instanceof ServerPlayer player) {
+                        GUI.openMenu(player);
                     } else {
                         context.getSource().sendFailure(Component.literal("プレイヤーのみ使用できます。"));
                     }
@@ -33,7 +34,7 @@ public class CommandManager {
                 })
         );
 
-        event.getDispatcher().register(
+        event.getServer().getCommands().getDispatcher().register(
                 Commands.literal("load").executes(context -> {
                     Object miniutility = plugin.getMiniutility();
                     if (miniutility == null) {
@@ -46,10 +47,10 @@ public class CommandManager {
                 })
         );
 
-        event.getDispatcher().register(
+        event.getServer().getCommands().getDispatcher().register(
                 Commands.literal("prefixtoggle").executes(context -> {
                     Object sender = context.getSource().getEntity();
-                    if (!(sender instanceof ServerPlayer)) {
+                    if (!(sender instanceof ServerPlayer player)) {
                         context.getSource().sendFailure(Component.literal("プレイヤーのみ実行可能です。"));
                         return 1;
                     }
@@ -59,7 +60,7 @@ public class CommandManager {
                         return 1;
                     }
                     Object manager = plugin.getMiniutility().getNicknameManager();
-                    boolean enabled = ((org.hotamachisubaru.miniutility.NicknameManager) manager).togglePrefix(((ServerPlayer) sender).getUUID());
+                    boolean enabled = ((org.hotamachisubaru.miniutility.NicknameManager) manager).togglePrefix(player.getUUID());
                     context.getSource().sendSuccess(
                             Component.literal("Prefixの表示が " + (enabled ? "有効" : "無効")), true
                     );
