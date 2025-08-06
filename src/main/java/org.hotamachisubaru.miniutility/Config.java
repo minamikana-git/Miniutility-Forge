@@ -8,17 +8,22 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = "miniutility", bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config {
-    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec CLIENT_SPEC;
+    private static final ForgeConfigSpec.BooleanValue ENABLE_DOUBLE_JUMP;
 
-    public static final ForgeConfigSpec.BooleanValue ENABLE_DOUBLE_JUMP =
-            BUILDER.comment("Enable double jump").define("enableDoubleJump", true);
-
-    static final ForgeConfigSpec SPEC = BUILDER.build();
+    static {
+        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        ENABLE_DOUBLE_JUMP = builder.comment("Enable double jump")
+                .define("enableDoubleJump", true);
+        CLIENT_SPEC = builder.build();
+    }
 
     public static boolean enableDoubleJump;
 
     @SubscribeEvent
-    static void onLoad(final ModConfigEvent event) {
-        enableDoubleJump = ENABLE_DOUBLE_JUMP.get();
+    static void onLoad(final ModConfigEvent.Loading event) {
+        if (event.getConfig().getSpec() == CLIENT_SPEC) {
+            enableDoubleJump = ENABLE_DOUBLE_JUMP.get();
+        }
     }
 }
