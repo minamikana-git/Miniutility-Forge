@@ -2,13 +2,11 @@ package org.hotamachisubaru.miniutility.Listener;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import org.hotamachisubaru.miniutility.GUI.GUI;
-import org.hotamachisubaru.miniutility.MiniutilityLoader;
+import org.hotamachisubaru.miniutility.Miniutility;
 import org.hotamachisubaru.miniutility.Nickname.NicknameManager;
 
 import java.util.HashSet;
@@ -20,11 +18,11 @@ public class Utilitys {
 
     // 再ワープ防止
     private static final Set<UUID> recentlyTeleported = new HashSet<>();
-    private final MiniutilityLoader plugin;
+    private final Miniutility mod;
     private final NicknameManager nicknameManager;
 
-    public Utilitys(MiniutilityLoader plugin, NicknameManager nicknameManager) {
-        this.plugin = plugin;
+    public Utilitys(Miniutility mod, NicknameManager nicknameManager) {
+        this.mod = mod;
         this.nicknameManager = nicknameManager;
     }
 
@@ -64,7 +62,7 @@ public class Utilitys {
     }
 
     private void teleportToDeathLocation(ServerPlayer player) {
-        if (plugin.getMiniutility() == null) {
+        if (mod.getMiniutility() == null) {
             player.displayClientMessage(Component.text("プラグイン初期化中です。").color(NamedTextColor.RED), false);
             return;
         }

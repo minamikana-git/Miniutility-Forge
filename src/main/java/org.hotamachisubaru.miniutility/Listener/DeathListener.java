@@ -1,67 +1,57 @@
 package org.hotamachisubaru.miniutility.Listener;
 
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
-import org.hotamachisubaru.miniutility.MiniutilityLoader;
-import org.hotamachisubaru.miniutility.util.FoliaUtil;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import org.hotamachisubaru.miniutility.Miniutility;
 
-public class DeathListener implements Listener {
+public class DeathListener {
 
-    private final MiniutilityLoader plugin;
+    private final Miniutility mod;
 
-    public DeathListener(MiniutilityLoader plugin) {
-        this.plugin = plugin;
+    public DeathListener(Miniutility mod) {
+        this.mod = mod;
     }
 
-    @EventHandler
-    public void saveDeathLocation(PlayerDeathEvent event) {
+    @SubscribeEvent
+    public void saveDeathLocation(PlayerEvent.PlayerRespawnEvent event) {
         Player player = event.getEntity();
-        // 死亡地点（頭上1ブロック、ディメンション付き）保存
-        Location deathLoc = player.getLocation().getBlock().getLocation().add(0, 1, 0);
-        // Miniutility本体経由で保存
-        if (plugin.getMiniutility() != null) {
-            plugin.getMiniutility().setDeathLocation(player.getUniqueId(), deathLoc);
+        if (!(player.level() instanceof ServerLevel world)) return;
+        BlockPos deathLoc = player.blockPosition().relative(0, 1, 0); // 対応する座標取得
+
+        // Miniutility本体を介して保存
+        if (mod.getMiniutility() != null) {
+            mod.getMiniutility().setDeathLocation(player.getUUID(), deathLoc, world.dimension().location());
         }
 
-        // 必要に応じてダブルチェスト設置
-        FoliaUtil.runAtLocation(plugin, deathLoc, () -> {
-            Block block1 = deathLoc.getBlock();
-            Block block2 = block1.getRelative(1, 0, 0); // X+1側に並べる
+        // 必要であればダブルチェストの設置
+        world.getServer().execute(() -> {
+            BlockPos chestPos1 = deathLoc;
+            BlockPos chestPos2 = chestPos1.east(); // X+1側に位置決定
 
-            // 既にチェストがある場合は設置しない
-            if (block1.getType() != Material.AIR || block2.getType() != Material.AIR) return;
+            // 既にチェストがある場合、処理をスキップ
+            if (!world.getBlockState(chestPos1).isAir() || !world.getBlockState(chestPos2).isAir()) return;
 
-            // まず両方Material.CHESTで設置
-            block1.setType(Material.CHEST);
-            block2.setType(Material.CHEST);
+            // 両方の位置にチェストを設置
+            world.setBlockAndUpdate(chestPos1, Blocks.CHEST.defaultBlockState());
+            world.setBlockAndUpdate(chestPos2, Blocks.CHEST.defaultBlockState());
 
-            // BlockDataでダブルチェストに設定
-            org.bukkit.block.data.type.Chest chestData1 = (org.bukkit.block.data.type.Chest) block1.getBlockData();
-            chestData1.setType(org.bukkit.block.data.type.Chest.Type.LEFT);
-            block1.setBlockData(chestData1);
-
-            org.bukkit.block.data.type.Chest chestData2 = (org.bukkit.block.data.type.Chest) block2.getBlockData();
-            chestData2.setType(org.bukkit.block.data.type.Chest.Type.RIGHT);
-            block2.setBlockData(chestData2);
-
-            // Chestインベントリへアイテムコピー（ダブルチェストで54スロット）
-            if (block1.getState() instanceof Chest chest1) {
-                PlayerInventory inv = player.getInventory();
-                ItemStack[] contents = inv.getContents();
-                for (int i = 0; i < Math.min(contents.length, chest1.getInventory().getSize()); i++) {
-                    if (contents[i] != null) {
-                        chest1.getInventory().setItem(i, contents[i].clone());
+            // チェストにアイテム変換
+            BlockEntity blockEntity1 = world.getBlockEntity(chestPos1);
+            if (blockEntity1 instanceof ChestBlockEntity chest1) {
+                ItemStack[] contents = player.getInventory().items.toArray(new ItemStack[0]);
+                for (int i = 0; i < Math.min(contents.length, chest1.getContainerSize()); i++) {
+                    if (!contents[i].isEmpty()) {
+                        chest1.setItem(i, contents[i].copy());
                     }
                 }
-                chest1.update();
             }
         });
     }

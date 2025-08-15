@@ -2,11 +2,19 @@ package org.hotamachisubaru.miniutility;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+import org.hotamachisubaru.miniutility.Listener.*;
+import org.hotamachisubaru.miniutility.Menu.MiniutilityMenu;
+import org.hotamachisubaru.miniutility.Nickname.NicknameDatabase;
+import org.hotamachisubaru.miniutility.Nickname.NicknameManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,38 +32,45 @@ public class Miniutility {
 
     private final Map<UUID, String> deathLocations = new ConcurrentHashMap<>();
     private final Logger logger = Logger.getLogger("Miniutility");
-    private MiniutilityConfig config;
+    public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(ForgeRegistries.MENU_TYPES, "miniutility");
+    public static final RegistryObject<MenuType<MiniutilityMenu>> MINIUTILITY_MENU = MENUS.register("menu", () -> IForgeMenuType.create(MiniutilityMenu::new));
+
+    private Config config;
+    private NicknameDatabase nicknameDatabase;
+    private NicknameManager nicknameManager;
 
     public Miniutility() {
-        MinecraftForge.EVENT_BUS.addListener(this::onServerStarting);
-        MinecraftForge.EVENT_BUS.addListener(this::setup);
+        // Register MenuType
+        MENUS.register(FMLJavaModLoadingContext.get().getModEventBus());
+
+        // Register Listeners
+        MinecraftForge.EVENT_BUS.register(new DeathListener(this));
+        MinecraftForge.EVENT_BUS.register(new Chat(this, new NicknameDatabase(new File("config/miniutility")), new NicknameManager(this, new NicknameDatabase(new File("config/miniutility")))));
+        MinecraftForge.EVENT_BUS.register(new CreeperProtectionListener(this));
+
+        MinecraftForge.EVENT_BUS.register(new NicknameListener(this));
+        MinecraftForge.EVENT_BUS.register(new TrashListener(this));
+
+        // Initialize database and configuration
+        setupDatabase();
+        nicknameDatabase = new NicknameDatabase(new File("config/miniutility/nickname.db"));
+        nicknameManager = new NicknameManager(this, nicknameDatabase);
+
+        // Other initialization processes
+        checkUpdates();
     }
 
     private void setup(final FMLCommonSetupEvent event) {
-        config = new MiniutilityConfig();
+        config = new Config();
         config.loadDefaultConfig();
         setupDatabase();
-        registerListeners();
         checkUpdates();
-        logger.info("Miniutility の初期化が正常に完了しました。");
+        logger.info("Miniutility initialization completed successfully.");
     }
 
-    private void onServerStarting(final ServerStartingEvent event) {
-        logger.info("Miniutility を使用してサーバーを起動しています。");
-    }
-
-    private void registerListeners() {
-        MinecraftForge.EVENT_BUS.register(new DeathListener(this));
-        MinecraftForge.EVENT_BUS.register(new ChatListener(this));
-        MinecraftForge.EVENT_BUS.register(new CreeperProtectionListener(this));
-        MinecraftForge.EVENT_BUS.register(new Menu());
-        MinecraftForge.EVENT_BUS.register(new NicknameListener(this));
-        MinecraftForge.EVENT_BUS.register(new TrashListener(this));
-    }
-
-    private void checkUpdates() {
+    protected void checkUpdates() {
         String owner = "minamikana-git";
-        String repo = "Miniutility";
+        String repo = "Miniutility-Forge";
         String apiUrl = String.format(
                 "https://api.github.com/repos/%s/%s/releases/latest",
                 owner, repo
@@ -69,7 +84,7 @@ public class Miniutility {
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
-                logger.warning("アップデートチェックに失敗しました: HTTP " + response.statusCode());
+                logger.warning("Update check failed: HTTP " + response.statusCode());
                 return;
             }
             JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
@@ -77,17 +92,17 @@ public class Miniutility {
             String currentVersion = "1.0.0"; // Placeholder for mod version
             if (!currentVersion.equals(latestTag)) {
                 String url = json.get("html_url").getAsString();
-                logger.info("新しいバージョンが利用可能です: " + latestTag + ". ダウンロード: " + url);
+                logger.info("A new version is available: " + latestTag + ". Download: " + url);
             }
         } catch (IOException | InterruptedException e) {
-            logger.warning("アップデートチェック中にエラーが発生しました: " + e.getMessage());
+            logger.warning("An error occurred during the update check: " + e.getMessage());
         }
     }
 
     private void setupDatabase() {
         File dbFile = new File("config/miniutility/nickname.db");
         if (dbFile.exists()) {
-            logger.info("nickname.db はすでに存在します。セットアップをスキップします。");
+            logger.info("nickname.db already exists. Skipping setup.");
             return;
         }
         try {
@@ -97,9 +112,21 @@ public class Miniutility {
                     stmt.executeUpdate("CREATE TABLE IF NOT EXISTS nicknames (uuid TEXT PRIMARY KEY, nickname TEXT)");
                 }
             }
-            logger.info("nickname.db を初期化し、必要なテーブルを作成しました。");
+            logger.info("nickname.db initialized and necessary tables created.");
         } catch (Exception e) {
-            logger.severe("nickname.db の初期化に失敗しました: " + e.getMessage());
+            logger.severe("Failed to initialize nickname.db: " + e.getMessage());
         }
+    }
+
+    public NicknameManager getNicknameManager() {
+        return nicknameManager;
+    }
+
+    public NicknameDatabase getNicknameDatabase() {
+        return nicknameDatabase;
+    }
+
+    public Miniutility getMiniutility() {
+        return this;
     }
 }

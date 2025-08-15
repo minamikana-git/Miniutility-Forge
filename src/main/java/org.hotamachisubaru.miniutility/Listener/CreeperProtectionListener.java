@@ -1,24 +1,25 @@
 package org.hotamachisubaru.miniutility.Listener;
 
-import org.bukkit.entity.Creeper;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityExplodeEvent;
-import org.hotamachisubaru.miniutility.MiniutilityLoader;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraftforge.event.level.ExplosionEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import org.hotamachisubaru.miniutility.Miniutility;
 
-public class CreeperProtectionListener implements Listener {
-    private final MiniutilityLoader plugin;
+@Mod.EventBusSubscriber
+public class CreeperProtectionListener {
+    private final Miniutility mod;
     private boolean creeperProtectionEnabled = true;
 
-    public CreeperProtectionListener(MiniutilityLoader plugin) {
-        this.plugin = plugin;
+    public CreeperProtectionListener(Miniutility mod) {
+        this.mod = mod;
     }
 
-    @EventHandler
-    public void onCreeperExplode(EntityExplodeEvent event) {
+    @SubscribeEvent
+    public void onCreeperExplode(ExplosionEvent.Detonate event) {
         if (!creeperProtectionEnabled) return;
-        if (event.getEntity() instanceof Creeper) {
-            event.setCancelled(true);
+        if (event.getExplosion().getSourceMob() instanceof Creeper) {
+            event.getExplosion().clearToBlow();
         }
     }
 
@@ -26,6 +27,7 @@ public class CreeperProtectionListener implements Listener {
         creeperProtectionEnabled = !creeperProtectionEnabled;
         return creeperProtectionEnabled;
     }
+
     public boolean isCreeperProtectionEnabled() {
         return creeperProtectionEnabled;
     }

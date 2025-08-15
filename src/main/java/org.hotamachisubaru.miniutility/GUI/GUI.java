@@ -5,9 +5,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.Container;
+
 
 public class GUI {
 
@@ -21,7 +20,7 @@ public class GUI {
 
             @Override
             public AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inventory, Player player) {
-                return new UtilityMenu(id, inventory);
+                return new UtilityMenu(id, inventory, player);
             }
         });
     }
@@ -33,10 +32,10 @@ public class GUI {
             public Component getDisplayName() {
                 return Component.literal("ニックネームを変更");
             }
-
+t
             @Override
             public AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inventory, Player player) {
-                return new NicknameMenu(id, inventory);
+                return new NicknameMenu(id, inventory, player);
             }
         });
     }
@@ -44,8 +43,8 @@ public class GUI {
     // メニューアイテム生成ヘルパーメソッド
     public static ItemStack createMenuItem(Items item, String name, String lore) {
         ItemStack stack = new ItemStack(item);
-        stack.getOrCreateTag().putString("displayName", name);
-        stack.getOrCreateTag().putString("lore", lore);
+        stack.getOrCreateTagElement("display").putString("Name", Component.Serializer.toJson(Component.literal(name)));
+        stack.getOrCreateTagElement("display").putString("Lore", Component.Serializer.toJson(Component.literal(lore)));
         return stack;
     }
 

@@ -39,13 +39,16 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 repositories {
     maven { name = "Forge"; url = "https://maven.minecraftforge.net/" }
     maven { name = "Minecraft"; url = "https://libraries.minecraft.net/" }
+    maven { name = "LuckPerms"; url = "https://repo1.maven.org/maven2/net/luckperms/api/5.5"}
     mavenCentral()
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:1.20.1-${forge_version}" // Updated Minecraft dependency to 1.20.1
     implementation('net.sf.jopt-simple:jopt-simple:5.0.4') { version { strictly '5.0.4' } }
+    implementation "net.luckperms:api-5.5"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.10" // Updated Kotlin stdlib for compatibility
+    implementation "net.kyori:adventure-api:4.24.0"
 }
 
 tasks.named('processResources', ProcessResources).configure {

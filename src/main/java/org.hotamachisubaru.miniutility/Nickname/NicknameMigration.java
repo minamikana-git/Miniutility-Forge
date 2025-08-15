@@ -2,7 +2,7 @@ package org.hotamachisubaru.miniutility.Nickname;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.hotamachisubaru.miniutility.MiniutilityLoader;
+import org.hotamachisubaru.miniutility.Miniutility;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -16,19 +16,19 @@ import java.util.logging.Logger;
  */
 public class NicknameMigration {
 
-    private final MiniutilityLoader plugin;
+    private final Miniutility mod;
 
-    public NicknameMigration(MiniutilityLoader plugin) {
-        this.plugin = plugin;
+    public NicknameMigration(Miniutility mod) {
+        this.mod = mod;
     }
 
     /**
      * YAMLファイルからSQLiteデータベースへニックネームを移行
      */
     public void migrateToDatabase() {
-        File yamlFile = new File(plugin.getDataFolder(), "nickname.yml");
-        String dbPath = new File(plugin.getDataFolder(), "nicknames.db").getPath();
-        Logger logger = plugin.getLogger();
+        File yamlFile = new File(mod.getDataFolder(), "nickname.yml");
+        String dbPath = new File(mod.getDataFolder(), "nicknames.db").getPath();
+        Logger logger = mod.getLogger();
 
         if (!yamlFile.exists()) {
             logger.warning("ニックネームの保存ファイルがありません。統合をスキップします。");
@@ -53,11 +53,13 @@ public class NicknameMigration {
             try (PreparedStatement pstmt = connection.prepareStatement(insertQuery)) {
                 for (String uuid : keys) {
                     String nickname = yamlConfig.getString(uuid);
-                    if (nickname != null) {
+                    if (nickname != null && !nickname.isBlank()) {
                         pstmt.setString(1, uuid);
                         pstmt.setString(2, nickname);
                         pstmt.executeUpdate();
                         logger.info("データベースへのニックネームの統合に成功しました: " + uuid);
+                    } else {
+                        logger.warning("UUID " + uuid + " のニックネームが無効です。スキップします。");
                     }
                 }
             }
@@ -70,16 +72,16 @@ public class NicknameMigration {
      * Forge用にSQLiteファイルを作成し、データを取得
      */
     public void migrateToDatabaseForge() {
-        File yamlFile = new File(plugin.getDataFolder(), "nickname.yml");
-        String dbPath = new File(plugin.getDataFolder(), "nicknames.db").getPath();
-        Logger logger = plugin.getLogger();
+        File yamlFile = new File(mod.getDataFolder(), "nickname.yml");
+        String dbPath = new File(mod.getDataFolder(), "nicknames.db").getPath();
+        Logger logger = mod.getLogger();
 
         if (!yamlFile.exists()) {
             logger.warning("ニックネームの保存ファイルがありません。統合をスキップします。");
             return;
         }
 
-        Set<String> keys = null;
+        Set<String> keys;
         try {
             FileConfiguration yamlConfig = YamlConfiguration.loadConfiguration(yamlFile);
             keys = yamlConfig.getKeys(false);
@@ -103,18 +105,22 @@ public class NicknameMigration {
             String insertQuery = "REPLACE INTO nicknames (uuid, nickname) VALUES (?, ?)";
             try (PreparedStatement pstmt = connection.prepareStatement(insertQuery)) {
                 for (String uuid : keys) {
-                    String nickname = null;
+                    String nickname;
                     try {
                         FileConfiguration yamlConfig = YamlConfiguration.loadConfiguration(yamlFile);
                         nickname = yamlConfig.getString(uuid);
                     } catch (Exception e) {
                         logger.warning("UUID " + uuid + " のニックネーム取得に失敗しました: " + e.getMessage());
+                        continue;
                     }
-                    if (nickname != null) {
+
+                    if (nickname != null && !nickname.isBlank()) {
                         pstmt.setString(1, uuid);
                         pstmt.setString(2, nickname);
                         pstmt.executeUpdate();
                         logger.info("Forge用データベースへのニックネームの統合に成功しました: " + uuid);
+                    } else {
+                        logger.warning("UUID " + uuid + " のニックネームが無効です。スキップします。");
                     }
                 }
             }
