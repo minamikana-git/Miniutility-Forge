@@ -1,17 +1,17 @@
 package org.hotamachisubaru.miniutility.Nickname;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.json.JSONObject;
 import org.hotamachisubaru.miniutility.Miniutility;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
 import java.util.Set;
 import java.util.logging.Logger;
 
 /**
- * ニックネームYAML→SQLite移行用
+ * ニックネームJSON→SQLite移行用
  * データベースパスやログ取得はMiniutilityLoaderから
  */
 public class NicknameMigration {
@@ -23,20 +23,28 @@ public class NicknameMigration {
     }
 
     /**
-     * YAMLファイルからSQLiteデータベースへニックネームを移行
+     * JSONファイルからSQLiteデータベースへニックネームを移行
      */
     public void migrateToDatabase() {
-        File yamlFile = new File(mod.getDataFolder(), "nickname.yml");
+        File jsonFile = new File(mod.getDataFolder(), "nickname.json");
         String dbPath = new File(mod.getDataFolder(), "nicknames.db").getPath();
         Logger logger = mod.getLogger();
 
-        if (!yamlFile.exists()) {
+        if (!jsonFile.exists()) {
             logger.warning("ニックネームの保存ファイルがありません。統合をスキップします。");
             return;
         }
 
-        FileConfiguration yamlConfig = YamlConfiguration.loadConfiguration(yamlFile);
-        Set<String> keys = yamlConfig.getKeys(false);
+        JSONObject jsonConfig;
+        try {
+            String content = Files.readString(jsonFile.toPath());
+            jsonConfig = new JSONObject(content);
+        } catch (Exception e) {
+            logger.warning("JSONファイルの読み込みに失敗しました: " + e.getMessage());
+            return;
+        }
+
+        Set<String> keys = jsonConfig.keySet();
         if (keys == null || keys.isEmpty()) {
             logger.info("ニックネームが存在しません。もしくは壊れています。統合をスキップします。");
             return;
@@ -52,8 +60,8 @@ public class NicknameMigration {
             String insertQuery = "REPLACE INTO nicknames (uuid, nickname) VALUES (?, ?)";
             try (PreparedStatement pstmt = connection.prepareStatement(insertQuery)) {
                 for (String uuid : keys) {
-                    String nickname = yamlConfig.getString(uuid);
-                    if (nickname != null && !nickname.isBlank()) {
+                    String nickname = jsonConfig.optString(uuid, "").trim();
+                    if (!nickname.isBlank()) {
                         pstmt.setString(1, uuid);
                         pstmt.setString(2, nickname);
                         pstmt.executeUpdate();
@@ -72,24 +80,25 @@ public class NicknameMigration {
      * Forge用にSQLiteファイルを作成し、データを取得
      */
     public void migrateToDatabaseForge() {
-        File yamlFile = new File(mod.getDataFolder(), "nickname.yml");
+        File jsonFile = new File(mod.getDataFolder(), "nickname.json");
         String dbPath = new File(mod.getDataFolder(), "nicknames.db").getPath();
         Logger logger = mod.getLogger();
 
-        if (!yamlFile.exists()) {
+        if (!jsonFile.exists()) {
             logger.warning("ニックネームの保存ファイルがありません。統合をスキップします。");
             return;
         }
 
-        Set<String> keys;
+        JSONObject jsonConfig;
         try {
-            FileConfiguration yamlConfig = YamlConfiguration.loadConfiguration(yamlFile);
-            keys = yamlConfig.getKeys(false);
+            String content = Files.readString(jsonFile.toPath());
+            jsonConfig = new JSONObject(content);
         } catch (Exception e) {
-            logger.warning("YAMLファイルの読み込みに失敗しました: " + e.getMessage());
+            logger.warning("JSONファイルの読み込みに失敗しました: " + e.getMessage());
             return;
         }
 
+        Set<String> keys = jsonConfig.keySet();
         if (keys == null || keys.isEmpty()) {
             logger.info("ニックネームが存在しません。もしくは壊れています。統合をスキップします。");
             return;
@@ -105,16 +114,8 @@ public class NicknameMigration {
             String insertQuery = "REPLACE INTO nicknames (uuid, nickname) VALUES (?, ?)";
             try (PreparedStatement pstmt = connection.prepareStatement(insertQuery)) {
                 for (String uuid : keys) {
-                    String nickname;
-                    try {
-                        FileConfiguration yamlConfig = YamlConfiguration.loadConfiguration(yamlFile);
-                        nickname = yamlConfig.getString(uuid);
-                    } catch (Exception e) {
-                        logger.warning("UUID " + uuid + " のニックネーム取得に失敗しました: " + e.getMessage());
-                        continue;
-                    }
-
-                    if (nickname != null && !nickname.isBlank()) {
+                    String nickname = jsonConfig.optString(uuid, "").trim();
+                    if (!nickname.isBlank()) {
                         pstmt.setString(1, uuid);
                         pstmt.setString(2, nickname);
                         pstmt.executeUpdate();

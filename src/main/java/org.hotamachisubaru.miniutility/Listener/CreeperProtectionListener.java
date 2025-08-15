@@ -19,16 +19,16 @@ public class CreeperProtectionListener {
     public void onCreeperExplode(ExplosionEvent.Detonate event) {
         if (!creeperProtectionEnabled) return;
         if (event.getExplosion().getSourceMob() instanceof Creeper) {
-            event.getExplosion().clearToBlow();
+            event.getAffectedBlocks().clear();
+            event.getAffectedEntities().clear();
         }
-    }
-
-    public boolean toggleCreeperProtection() {
-        creeperProtectionEnabled = !creeperProtectionEnabled;
-        return creeperProtectionEnabled;
     }
 
     public boolean isCreeperProtectionEnabled() {
         return creeperProtectionEnabled;
+    }
+
+    public void setCreeperProtectionEnabled(boolean creeperProtectionEnabled) {
+        this.creeperProtectionEnabled = creeperProtectionEnabled;
     }
 }
